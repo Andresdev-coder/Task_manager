@@ -1,0 +1,50 @@
+<h1 class="text-2xl font-semibold">Mis proyectos</h1>
+
+<form [formGroup]="form" (ngSubmit)="create()" class="card mt-6 grid gap-4 sm:grid-cols-3" novalidate>
+  <div>
+    <label for="name" class="label">Nombre</label>
+    <input id="name" type="text" formControlName="name" class="input" placeholder="Ej: Rediseño web" />
+    @if (form.controls.name.touched && form.controls.name.invalid) {
+      <p class="field-error">Mínimo 3 caracteres.</p>
+    }
+  </div>
+  <div>
+    <label for="description" class="label">Descripción (opcional)</label>
+    <input id="description" type="text" formControlName="description" class="input" />
+  </div>
+  <div class="flex items-end">
+    <button type="submit" class="btn-primary w-full" [disabled]="saving()">
+      {{ saving() ? 'Creando...' : 'Crear proyecto' }}
+    </button>
+  </div>
+</form>
+
+@if (error()) {
+  <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="mt-8 text-slate-500">Cargando proyectos...</p>
+} @else if (projects().length === 0) {
+  <div class="mt-8 rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
+    Aún no tienes proyectos. Crea el primero arriba.
+  </div>
+} @else {
+  <ul class="mt-8 grid gap-4 sm:grid-cols-2">
+    @for (project of projects(); track project._id) {
+      <li class="card flex flex-col justify-between">
+        <div>
+          <h2 class="text-lg font-semibold">{{ project.name }}</h2>
+          @if (project.description) {
+            <p class="mt-1 text-sm text-slate-600">{{ project.description }}</p>
+          }
+          <p class="mt-2 text-xs text-slate-400">Creado el {{ project.createdAt | date: 'dd/MM/yyyy' }}</p>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <a [routerLink]="['/projects', project._id]" class="btn-primary">Abrir</a>
+          <button type="button" class="btn-danger" (click)="remove(project)">Eliminar</button>
+        </div>
+      </li>
+    }
+  </ul>
+}

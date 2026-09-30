@@ -1,0 +1,175 @@
+<a routerLink="/projects" class="text-sm text-indigo-600 hover:underline">← Volver a proyectos</a>
+
+@if (loading()) {
+  <p class="mt-6 text-slate-500">Cargando proyecto...</p>
+} @else if (!project()) {
+  <p class="mt-6 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+    {{ error() ?? 'Proyecto no encontrado' }}
+  </p>
+} @else {
+  <div class="mt-3">
+    <h1 class="text-2xl font-semibold">{{ project()!.name }}</h1>
+    @if (project()!.description) {
+      <p class="mt-1 text-slate-600">{{ project()!.description }}</p>
+    }
+  </div>
+
+  <!-- Dashboard: se alimenta de stats(), un computed() -->
+  <section class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+    <div class="card">
+      <p class="text-xs uppercase text-slate-500">Total</p>
+      <p class="mt-1 text-2xl font-semibold">{{ stats().total }}</p>
+    </div>
+    <div class="card">
+      <p class="text-xs uppercase text-slate-500">Pendientes</p>
+      <p class="mt-1 text-2xl font-semibold text-slate-700">{{ stats().pending }}</p>
+    </div>
+    <div class="card">
+      <p class="text-xs uppercase text-slate-500">En progreso</p>
+      <p class="mt-1 text-2xl font-semibold text-amber-600">{{ stats().inProgress }}</p>
+    </div>
+    <div class="card">
+      <p class="text-xs uppercase text-slate-500">Completadas</p>
+      <p class="mt-1 text-2xl font-semibold text-green-600">{{ stats().completed }}</p>
+    </div>
+  </section>
+
+  <div class="mt-4">
+    <div class="mb-1 flex justify-between text-xs text-slate-500">
+      <span>Progreso</span>
+      <span>{{ stats().percent }}%</span>
+    </div>
+    <div class="h-2 overflow-hidden rounded-full bg-slate-200">
+      <div class="h-full bg-green-500 transition-all" [style.width.%]="stats().percent"></div>
+    </div>
+  </div>
+
+  <!-- Formulario de tarea (crear / editar) -->
+  <form [formGroup]="form" (ngSubmit)="save()" class="card mt-8 space-y-4" novalidate>
+    <h2 class="text-lg font-semibold">{{ editingId() ? 'Editar tarea' : 'Nueva tarea' }}</h2>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="title" class="label">Título</label>
+        <input id="title" type="text" formControlName="title" class="input" />
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <p class="field-error">El título es obligatorio (mínimo 3 caracteres).</p>
+        }
+      </div>
+      <div>
+        <label for="dueDate" class="label">Fecha límite</label>
+        <input id="dueDate" type="date" formControlName="dueDate" class="input" />
+      </div>
+    </div>
+
+    <div>
+      <label for="description" class="label">Descripción</label>
+      <textarea id="description" rows="2" formControlName="description" class="input"></textarea>
+    </div>
+
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label for="status" class="label">Estado</label>
+        <select id="status" formControlName="status" class="input">
+          @for (opt of statusOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label for="priority" class="label">Prioridad</label>
+        <select id="priority" formControlName="priority" class="input">
+          @for (opt of priorityOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button type="submit" class="btn-primary" [disabled]="saving()">
+        {{ saving() ? 'Guardando...' : editingId() ? 'Guardar cambios' : 'Agregar tarea' }}
+      </button>
+      @if (editingId()) {
+        <button type="button" class="btn-secondary" (click)="resetForm()">Cancelar</button>
+      }
+    </div>
+  </form>
+
+  @if (error()) {
+    <p class="mt-4 rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{{ error() }}</p>
+  }
+
+  <!-- Filtros: [(ngModel)] se enlaza directamente a signals -->
+  <section class="mt-8 grid gap-3 sm:grid-cols-3">
+    <input
+      type="search"
+      class="input"
+      placeholder="Buscar por título..."
+      aria-label="Buscar por título"
+      [(ngModel)]="search"
+    />
+    <select class="input" aria-label="Filtrar por estado" [(ngModel)]="statusFilter">
+      <option value="">Todos los estados</option>
+      @for (opt of statusOptions; track opt.value) {
+        <option [value]="opt.value">{{ opt.label }}</option>
+      }
+    </select>
+    <select class="input" aria-label="Filtrar por prioridad" [(ngModel)]="priorityFilter">
+      <option value="">Todas las prioridades</option>
+      @for (opt of priorityOptions; track opt.value) {
+        <option [value]="opt.value">{{ opt.label }}</option>
+      }
+    </select>
+  </section>
+
+  <!-- Lista de tareas -->
+  @if (tasks().length === 0) {
+    <div class="mt-6 rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
+      Este proyecto aún no tiene tareas.
+    </div>
+  } @else if (filteredTasks().length === 0) {
+    <div class="mt-6 rounded-xl border border-dashed border-slate-300 p-10 text-center text-slate-500">
+      Ninguna tarea coincide con los filtros.
+    </div>
+  } @else {
+    <ul class="mt-6 space-y-3">
+      @for (task of filteredTasks(); track task._id) {
+        <li class="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-medium" [class.line-through]="task.status === 'completada'"
+                  [class.text-slate-400]="task.status === 'completada'">
+                {{ task.title }}
+              </h3>
+              <span class="rounded-full px-2 py-0.5 text-xs font-medium" [class]="priorityClass[task.priority]">
+                {{ task.priority }}
+              </span>
+              @if (isOverdue(task)) {
+                <span class="rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white">Vencida</span>
+              }
+            </div>
+            @if (task.description) {
+              <p class="mt-1 text-sm text-slate-600">{{ task.description }}</p>
+            }
+            @if (task.dueDate) {
+              <!-- 'UTC' evita que la fecha se corra un día por la zona horaria -->
+              <p class="mt-1 text-xs text-slate-400">Vence: {{ task.dueDate | date: 'dd/MM/yyyy' : 'UTC' }}</p>
+            }
+          </div>
+
+          <div class="flex shrink-0 items-center gap-2">
+            <select class="input w-auto" aria-label="Cambiar estado" [value]="task.status"
+                    (change)="changeStatus(task, $event)">
+              @for (opt of statusOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+            <button type="button" class="btn-secondary" (click)="startEdit(task)">Editar</button>
+            <button type="button" class="btn-danger" (click)="remove(task)">Eliminar</button>
+          </div>
+        </li>
+      }
+    </ul>
+  }
+}

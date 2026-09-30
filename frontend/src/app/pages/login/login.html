@@ -1,0 +1,35 @@
+<div class="card mx-auto mt-10 max-w-md p-8">
+  <h1 class="text-2xl font-semibold">Iniciar sesión</h1>
+  <p class="mt-1 text-sm text-slate-500">Entra para gestionar tus proyectos.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="mt-6 space-y-4" novalidate>
+    <div>
+      <label for="email" class="label">Correo</label>
+      <input id="email" type="email" formControlName="email" class="input" />
+      @if (form.controls.email.touched && form.controls.email.invalid) {
+        <p class="field-error">Ingresa un correo válido.</p>
+      }
+    </div>
+
+    <div>
+      <label for="password" class="label">Contraseña</label>
+      <input id="password" type="password" formControlName="password" class="input" />
+      @if (form.controls.password.touched && form.controls.password.invalid) {
+        <p class="field-error">Mínimo 6 caracteres.</p>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{{ error() }}</p>
+    }
+
+    <button type="submit" class="btn-primary w-full" [disabled]="loading()">
+      {{ loading() ? 'Entrando...' : 'Entrar' }}
+    </button>
+  </form>
+
+  <p class="mt-6 text-center text-sm text-slate-500">
+    ¿No tienes cuenta?
+    <a routerLink="/register" class="font-medium text-indigo-600 hover:underline">Regístrate</a>
+  </p>
+</div>
